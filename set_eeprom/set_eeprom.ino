@@ -1,6 +1,6 @@
 #include <EEPROM.h>
 
-int id = 1;
+int id = 2; // set id to the value you want to be stored in the eeprom
 
 void setup()
 {
