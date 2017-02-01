@@ -83,7 +83,7 @@ void loop()
       {
         case(STATUS):
           
-          delay(45); // delay to allow for the master to enter recieve mode
+          delay(30); // delay to allow for the master to enter recieve mode
         
           setMode(TX); // enable tx mode on the MAX485
           
