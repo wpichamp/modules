@@ -31,7 +31,7 @@ void setup()
 
   pinMode(debug_led_PIN, OUTPUT); 
 
-  my_id = EEPROM.read(0);
+  my_id = EEPROM.read(0); // read the ID stored in eeprom
     
   setMode(RX);
 }
