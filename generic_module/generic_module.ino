@@ -1,3 +1,7 @@
+#include <EEPROM.h>
+#include "Message.h"
+
+
 #define TX HIGH
 #define RX LOW
 
@@ -5,8 +9,6 @@
 #define STATUS 0
 
 #define MESSAGESIZE 10
-
-#include <EEPROM.h>
 
 byte my_id;
 int master_id = 0;
@@ -40,7 +42,7 @@ byte button_state;
 byte pot_state;
 byte s;
 
-byte message[MESSAGESIZE];
+byte message_buff[MESSAGESIZE];
 
 /* message fields */
 byte to_id;
@@ -56,6 +58,8 @@ byte d4;
 byte d5;
 /* end of message fields */
 
+Message m = Message();
+
 void loop()
 {
   setMode(RX);
@@ -63,23 +67,25 @@ void loop()
   if (Serial.available() >= 10)
   {
     digitalWrite(debug_led_PIN, HIGH);
-    Serial.readBytes(message, MESSAGESIZE);
-  
-    to_id = message[0];
-    from_id = message[1];
-    checksum = message[2];
-    message_type = message[3];
-    
-    d0 = message[4];
-    d1 = message[5];
-    d2 = message[6];
-    d3 = message[7];
-    d4 = message[8];
-    d5 = message[9];
+    Serial.readBytes(message_buff, MESSAGESIZE);
 
-    if (to_id == my_id)
+    m.readIn(message_buff);
+  
+    to_id = message_buff[0];
+    from_id = message_buff[1];
+    checksum = message_buff[2];
+    message_type = message_buff[3];
+    
+    d0 = message_buff[4];
+    d1 = message_buff[5];
+    d2 = message_buff[6];
+    d3 = message_buff[7];
+    d4 = message_buff[8];
+    d5 = message_buff[9];
+
+    if (m.to_id == my_id)
     {
-      switch(message_type)
+      switch(m.message_type)
       {
         case(STATUS):
           
