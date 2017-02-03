@@ -54,11 +54,11 @@ byte message_buff[MESSAGESIZE];
 
 void loop()
 {
-
   button_state = digitalRead(button_PIN);   
   pot_state = map(analogRead(0), 0, 1023, 0, 255); 
-  
-  setMode(RX);
+}
+
+void serialEvent() {
   
   if (Serial.available() >= 10)
   {
@@ -86,11 +86,13 @@ void loop()
           /* write the message back to the master */ 
           writeBytes(tx_message.getMessageBytes(), 10);
           
+          setMode(RX);
+      
           digitalWrite(debug_led_PIN, LOW);
           break;
         
         default:
-          setMode(RX);
+          
           break;
       }
     }
@@ -98,7 +100,7 @@ void loop()
     {
       // since the ID didn't match, the rest of the buffer doesn't matter
       clearBuffer();
-    }    
+    }  
   }
 }
 
