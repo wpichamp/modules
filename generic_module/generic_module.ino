@@ -21,9 +21,8 @@ int led_PIN = 3;
 
 int debug_led_PIN = 13;
 
-
-Message rx_message = Message();
-Message tx_message = Message();
+Message rx_message = Message(); // getting sending data
+Message tx_message = Message(); // for sending data
 
 void setup() 
 {
@@ -92,13 +91,12 @@ void serialEvent() {
           break;
         
         default:
-          
           break;
       }
     }
     else
     {
-      // since the ID didn't match, the rest of the buffer doesn't matter
+      /* clear the buffer as the id didn't match */      
       clearBuffer();
     }  
   }
