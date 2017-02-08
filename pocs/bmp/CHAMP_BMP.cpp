@@ -9,8 +9,7 @@
 #include "CHAMP_BMP.h"
 #include "SFE_BMP180.h"
 
-#define ALTITUDE 1655.0 // Altitude of SparkFun's HQ in Boulder, CO. in meters
-
+#define ALTITUDE 144 // Altitude the CHAMP Lab in Meters
 
 /* Constructor */ 
 CHAMP_BMP::CHAMP_BMP(double sa)
@@ -18,12 +17,31 @@ CHAMP_BMP::CHAMP_BMP(double sa)
   starting_altitude = sa;
 }
 
+/* Public Methods */
+
 // public method
 void CHAMP_BMP::init()
 {
   pressure.begin();
+  setInitialAltitude();
 }
 
+// public method
+void CHAMP_BMP::setInitialAltitude()
+{
+  last_altitude = getAlti();
+}
+
+// public method
+double CHAMP_BMP::getAltitudeDelta()
+{
+  double current_altitude = getAlti();
+  double delta = current_altitude - last_altitude;
+
+  last_altitude = current_altitude;
+  
+  return delta;
+}
 
 // public method
 double CHAMP_BMP::getTemp()
@@ -45,6 +63,8 @@ double CHAMP_BMP::getAlti()
   setReadings();
   return a;
 }
+
+/* Private Methods */
 
 // private method
 double CHAMP_BMP::getSeaL()

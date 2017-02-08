@@ -12,6 +12,7 @@ void setup()
   Serial.println("REBOOT"); 
   
   bmp.init();
+  bmp.setInitialAltitude();
 }
 
 void loop()
@@ -27,6 +28,10 @@ void loop()
   Serial.print(" Altitude: "); 
   double alt = bmp.getAlti();
   Serial.print(alt);
+
+  Serial.print(" Delta: ");
+  double delta = bmp.getAltitudeDelta();
+  Serial.print(delta);
 
   Serial.println("");
 }

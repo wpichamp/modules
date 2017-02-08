@@ -7,8 +7,7 @@
 
 /* Message Type Mappings */
 #define STATUS 0
-
-#define MESSAGESIZE 10
+#define SET1 1
 
 byte my_id;
 int master_id = 0;
@@ -21,6 +20,7 @@ int led_PIN = 3;
 
 int debug_led_PIN = 13;
 
+byte message_buff[MESSAGESIZE];
 Message rx_message = Message(); // getting sending data
 Message tx_message = Message(); // for sending data
 
@@ -49,8 +49,6 @@ byte button_state;
 byte pot_state;
 byte s;
 
-byte message_buff[MESSAGESIZE];
-
 void loop()
 {
   button_state = digitalRead(button_PIN);   
@@ -71,7 +69,7 @@ void serialEvent() {
     {
       switch(rx_message.message_type)
       {
-        case(STATUS):
+        case(STATUS): 
           
           delay(30); // delay to allow for the master to enter recieve mode
         
@@ -89,6 +87,9 @@ void serialEvent() {
       
           digitalWrite(debug_led_PIN, LOW);
           break;
+
+        case(SET1):
+          break;
         
         default:
           break;
@@ -96,8 +97,7 @@ void serialEvent() {
     }
     else
     {
-      /* clear the buffer as the id didn't match */      
-      clearBuffer();
+      clearBuffer(); // clear the buffer as the id didn't match
     }  
   }
 }

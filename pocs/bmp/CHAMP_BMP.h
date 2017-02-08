@@ -25,6 +25,9 @@ class CHAMP_BMP
     double getPres();       // get pressure in millibar (mb) aka hectopascals (hPa).
     double getAlti();       // get altitude in meters
 
+    void setInitialAltitude();
+    double getAltitudeDelta();
+
   private:
     
     SFE_BMP180 pressure; 
@@ -33,6 +36,8 @@ class CHAMP_BMP
     double P;
     double p0;
     double a;
+
+    double last_altitude;
 
     double getSeaL();
     void setReadings();

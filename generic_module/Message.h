@@ -9,6 +9,8 @@
 
 #include "Arduino.h"
 
+#define MESSAGESIZE 10
+
 class Message
 {
   public:
