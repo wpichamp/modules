@@ -1,21 +1,21 @@
 /*
- * message.h
+ * CHAMP_Message.h
  * A library passing messages using the easyRS485 protocol
  * Created By Devon Bray for CHAMP - champ.wpi.edu, 1 February 2017
 */
 
-#ifndef Message_h
-#define Message_h
+#ifndef CHAMP_Message_h
+#define CHAMP_Message_h
 
 #include "Arduino.h"
 
 #define MESSAGESIZE 10
 
-class Message
+class CHAMP_Message
 {
   public:
     
-    Message();
+    CHAMP_Message();
     void readIn(byte message_bytes[]);
     byte* getMessageBytes();
     

@@ -1,5 +1,5 @@
 #include <EEPROM.h>
-#include "Message.h"
+#include "CHAMP_Message.h"
 
 /* For setting the mode of the MAX485 */
 #define TX HIGH
@@ -21,8 +21,8 @@ int led_PIN = 3;
 int debug_led_PIN = 13;
 
 byte message_buff[MESSAGESIZE];
-Message rx_message = Message(); // getting sending data
-Message tx_message = Message(); // for sending data
+CHAMP_Message rx_message = CHAMP_Message(); // getting sending data
+CHAMP_Message tx_message = CHAMP_Message(); // for sending data
 
 void setup() 
 {
