@@ -1,4 +1,4 @@
-#include <SFE_BMP180.h>
+
 #include <Wire.h>
 #include "CHAMP_BMP.h"
 
@@ -10,8 +10,14 @@ void setup()
 {
   Serial.begin(9600);
   Serial.println("REBOOT"); 
+
+  boolean cleanStartup = true; 
   
-  bmp.init();
+  
+  cleanStartup &= bmp.init();
+
+  
+  
   bmp.setInitialAltitude();
 }
 

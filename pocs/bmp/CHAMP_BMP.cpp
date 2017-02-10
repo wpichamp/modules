@@ -1,6 +1,6 @@
 /*
  * CHAMP_BMP.cpp
- * A wrapper for making interfacing with the BMP180 even easier than the provided library makes it
+ * A wrapper for making interfacing with the BMP180 Barometric Pressure Sensor even easier than the provided library makes it
  * This is basically a library for a library for the BMP180 originally written by  Mike Grusin, SparkFun Electronics - https://www.sparkfun.com/products/11824
  * Created By Devon Bray for CHAMP - champ.wpi.edu, 7 February 2017
 */
@@ -20,10 +20,12 @@ CHAMP_BMP::CHAMP_BMP(double sa)
 /* Public Methods */
 
 // public method
-void CHAMP_BMP::init()
+// init method, to be called before the sensor is to be used
+boolean CHAMP_BMP::init()
 {
-  pressure.begin();
+  boolean beginStatus = pressure.begin();
   setInitialAltitude();
+  return beginStatus;
 }
 
 // public method
