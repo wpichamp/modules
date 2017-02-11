@@ -25,11 +25,8 @@ int debug_led_PIN = 13;
 
 byte message_buff[MESSAGESIZE];
 
-CHAMP_Message rx_message = CHAMP_Message(); // getting sending data
-CHAMP_Message tx_message = CHAMP_Message(); // for sending data
-
-//CHAMP_Message rx_message; // getting sending data
-//CHAMP_Message tx_message; // for sending data
+CHAMP_Message rx_message; // getting sending data
+CHAMP_Message tx_message; // for sending data
 
 void setup() 
 {
@@ -48,8 +45,6 @@ void setup()
   /* init the objects used in the project */
   rx_message.init();
   tx_message.init();
-
-
 
   /* to_id and from_id should not change in outgoing messages */
   tx_message.to_id = master_id;

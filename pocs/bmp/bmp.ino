@@ -8,16 +8,13 @@ CHAMP_BMP bmp(starting_altitude);
 
 void setup()
 {
-  Serial.begin(9600);
-  Serial.println("REBOOT"); 
+  Serial.begin(115200);
 
   boolean cleanStartup = true; 
   
   
   cleanStartup &= bmp.init();
 
-  
-  
   bmp.setInitialAltitude();
 }
 
