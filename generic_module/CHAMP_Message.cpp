@@ -1,7 +1,9 @@
 /*
  * CHAMP_Message.cpp
  * A library passing messages using the easyRS485 protocol
- * Created By Devon Bray for CHAMP - champ.wpi.edu, 1 February 2017
+ * Created By Devon Bray for CHAMP - champ.wpi.edu
+ * Created: 1 February 2017
+ * Last Updated: 10 February 2017
 */
 
 #include "Arduino.h"
@@ -11,19 +13,21 @@
 CHAMP_Message::CHAMP_Message()
 {
   /* init all the values in the message to 0 */
-  
-  to_id = 0;
-  from_id = 0;
-  checksum = 0;
-  message_type = 0;
-  
-  d0 = 0;
-  d1 = 0;
-  d2 = 0;
-  d3 = 0;
-  d4 = 0;
-  d5 = 0;
-  
+    
+}
+
+void CHAMP_Message::init()
+{
+	to_id = 0;
+	from_id = 0;
+	checksum = 0;
+	message_type = 0;
+	d0 = 0;
+	d1 = 0;
+	d2 = 0;
+	d3 = 0;
+	d4 = 0;
+	d5 = 0;
 }
 
 void CHAMP_Message::readIn(byte message_bytes[])

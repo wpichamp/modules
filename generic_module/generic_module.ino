@@ -1,5 +1,8 @@
 #include <EEPROM.h>
+
 #include "CHAMP_Message.h"
+#include "CHAMP_IMU.h"
+#include "CHAMP_BMP.h"
 
 /* For setting the mode of the MAX485 */
 #define TX HIGH
@@ -21,8 +24,12 @@ int led_PIN = 3;
 int debug_led_PIN = 13;
 
 byte message_buff[MESSAGESIZE];
+
 CHAMP_Message rx_message = CHAMP_Message(); // getting sending data
 CHAMP_Message tx_message = CHAMP_Message(); // for sending data
+
+//CHAMP_Message rx_message; // getting sending data
+//CHAMP_Message tx_message; // for sending data
 
 void setup() 
 {
@@ -37,6 +44,12 @@ void setup()
   pinMode(debug_led_PIN, OUTPUT); 
 
   my_id = EEPROM.read(0); // read the ID stored in eeprom
+
+  /* init the objects used in the project */
+  rx_message.init();
+  tx_message.init();
+
+
 
   /* to_id and from_id should not change in outgoing messages */
   tx_message.to_id = master_id;
