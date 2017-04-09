@@ -16,7 +16,10 @@ int re_PIN = 10;
 int de_PIN = 11;
 
 int button_PIN = 4;
-int led_PIN = 3;
+
+int led0_PIN = 3;
+int led1_PIN = 5;
+int led2_PIN = 6;
 
 int debug_led_PIN = 13;
 
@@ -26,11 +29,15 @@ void setup()
 {
   Serial.begin(9600);
   debugPort.begin(9600);
+  
   pinMode(re_PIN, OUTPUT);
   pinMode(de_PIN, OUTPUT);
   
   pinMode(button_PIN, INPUT);
-  pinMode(led_PIN, OUTPUT);
+  
+  pinMode(led0_PIN, OUTPUT);
+  pinMode(led1_PIN, OUTPUT);
+  pinMode(led2_PIN, OUTPUT);
 
   pinMode(debug_led_PIN, OUTPUT); 
 
@@ -48,8 +55,43 @@ byte payload;
 byte depth;
 byte incomingChecksum;
 
+bool newMessage = false;
+
 void loop()
 {
+  if (newMessage)
+  {
+    
+    debugPort.write(prefex0);
+    debugPort.write(prefex1);
+    debugPort.write(prefex2);
+    debugPort.write(prefex3);
+    debugPort.write(prefex4);
+    debugPort.write(payload);
+    debugPort.write(depth);
+    debugPort.write(incomingChecksum);
+    
+    
+    switch(prefex0)
+    {
+      case 0:
+        switch(prefex1)
+        {
+          case 0:
+            analogWrite(led0_PIN, payload);
+            break;
+          case 1:
+            analogWrite(led1_PIN, payload);
+            break;
+          case 2:
+            analogWrite(led2_PIN, payload);
+            break;
+        }
+        break;
+    }
+    newMessage = false;
+  
+  }
   
 }
 
@@ -72,21 +114,24 @@ void serialEvent() {
     
     byte calculatedChecksum = sum(message_buff, 7);
     
-    debugPort.write(incomingChecksum);
-    debugPort.write(calculatedChecksum);
     
     int goodChecksum = (calculatedChecksum == incomingChecksum);
 
     if (goodChecksum)
     {
       digitalWrite(debug_led_PIN, goodChecksum);
-      analogWrite(led_PIN, payload);
-      clearBuffer();
+      newMessage = true;
     } 
     else
     {
       digitalWrite(debug_led_PIN, LOW);
+      clearBuffer(); // give up on the current transmission
+      newMessage = false;
     }
+  }
+  else
+  {
+    newMessage = false;
   }
 }
 

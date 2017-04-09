@@ -27,7 +27,7 @@
  */
 
 #include <SoftwareSerial.h>
-#define MESSAGESIZE 1
+#define MESSAGESIZE 8
 
 
 SoftwareSerial mySerial(10, 11); // RX, TX
