@@ -30,7 +30,7 @@ CHAMP_Message tx_message; // for sending data
 
 void setup() 
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   pinMode(re_PIN, OUTPUT);
   pinMode(de_PIN, OUTPUT);

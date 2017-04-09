@@ -108,7 +108,7 @@ void CHAMP_BMP::setReadings()
         status = pressure.getPressure(P,T);
         if (status != 0)
         {
-          p0 = pressure.sealevel(P,ALTITUDE); // we're at 1655 meters (Boulder, CO)
+          p0 = pressure.sealevel(P,ALTITUDE);
           a = pressure.altitude(P,p0);
         }
       }
