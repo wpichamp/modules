@@ -6,6 +6,9 @@
 #define CTRL_ENABLE 0x000F
 #define CTRL_RESET 0x0006
 
+#define DLE 0x90
+#define STX 0x02
+
 SoftwareSerial EPOSSerial(10, 11); // RX, TX
 
 void setup()
@@ -16,6 +19,7 @@ void setup()
   // set the data rate for the SoftwareSerial port
   EPOSSerial.begin(9600);
 
+  // enables the coil
   updateControlWord(CTRL_RESET);
 
   delay(1000);
@@ -34,10 +38,7 @@ void loop()
 }
 
 void updateControlWord(word newWord)
-{
-  byte DLE = 0x90;
-  byte STX = 0x02;
-  
+{  
   byte Len = 0x04;
   byte OpCode = 0x68;
 
@@ -45,7 +46,7 @@ void updateControlWord(word newWord)
   word ObjectIndex = 0x6040;
   byte SubIndex = 0x00;
 
-  byte b = 0x0000;
+  byte fillword = 0x0000;
   byte data = newWord;
   
   word DataArray[6];
@@ -54,7 +55,7 @@ void updateControlWord(word newWord)
   DataArray[1] = word(lowByte(ObjectIndex), NodeID);
   DataArray[2] = word(0x00, highByte(ObjectIndex));
   DataArray[3] = data; 
-  DataArray[4] = b;
+  DataArray[4] = fillword;
   DataArray[5] = word(0x00, 0x00);    // Zero word
 
   word CRC = CalcFieldCRC(DataArray, 6);
@@ -70,14 +71,14 @@ void updateControlWord(word newWord)
   buff[3] = Len; // Len
 
   /* DATA */ 
-  buff[4] = NodeID; // LowByte data[0], Node ID
-  buff[5] = lowByte(ObjectIndex); // HighByte data[0], LowByte Index
-  buff[6] = highByte(ObjectIndex); // LowByte data[1], HighByte Index
-  buff[7] = SubIndex; // HighByte data[1], SubIndex
+  buff[4] = NodeID;                 // LowByte data[0], Node ID
+  buff[5] = lowByte(ObjectIndex);   // HighByte data[0], LowByte Index
+  buff[6] = highByte(ObjectIndex);  // LowByte data[1], HighByte Index
+  buff[7] = SubIndex;               // HighByte data[1], SubIndex
   buff[8] = lowByte(data);
   buff[9] = highByte(data);
-  buff[10] = lowByte(b);
-  buff[11] = highByte(b);
+  buff[10] = lowByte(fillword);
+  buff[11] = highByte(fillword);
 
   /* CRC */ 
   buff[12] = lowByte(CRC); // CRC Low Byte

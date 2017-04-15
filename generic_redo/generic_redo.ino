@@ -5,6 +5,7 @@ SoftwareSerial debugPort(8, 9); // RX, TX
 
 #define MESSAGESIZE 8
 
+
 /* For setting the mode of the MAX485 */
 #define TX HIGH
 #define RX LOW
@@ -23,7 +24,7 @@ int led2_PIN = 6;
 
 int debug_led_PIN = 13;
 
-byte message_buff[MESSAGESIZE];
+byte bus_buff[MESSAGESIZE];
 
 void setup() 
 {
@@ -101,18 +102,18 @@ void serialEvent() {
   {
     digitalWrite(debug_led_PIN, HIGH);
     
-    Serial.readBytes(message_buff, MESSAGESIZE);
+    Serial.readBytes(bus_buff, MESSAGESIZE);
     
-    prefex0 = message_buff[0];
-    prefex1 = message_buff[1];
-    prefex2 = message_buff[2];
-    prefex3 = message_buff[3];
-    prefex4 = message_buff[4];
-    payload = message_buff[5];
-    depth = message_buff[6];
-    incomingChecksum = message_buff[7];
+    prefex0 = bus_buff[0];
+    prefex1 = bus_buff[1];
+    prefex2 = bus_buff[2];
+    prefex3 = bus_buff[3];
+    prefex4 = bus_buff[4];
+    payload = bus_buff[5];
+    depth = bus_buff[6];
+    incomingChecksum = bus_buff[7];
     
-    byte calculatedChecksum = sum(message_buff, 7);
+    byte calculatedChecksum = sum(bus_buff, 7);
     
     
     int goodChecksum = (calculatedChecksum == incomingChecksum);
