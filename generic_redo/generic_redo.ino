@@ -1,7 +1,7 @@
 #include <EEPROM.h>
 #include <SoftwareSerial.h>
 
-SoftwareSerial EPOSSerial(8, 9);  // for interfacing with the EPOS4 motor controller
+SoftwareSerial EPOSSerial(8, 9);  // for interfacing with the EPOS4 motor controller - RX, TX
 
 #define BUSBUFFSIZE 8
 #define EPOSBUFFSIZE 14
@@ -36,6 +36,8 @@ void setup()
 {
   Serial.begin(9600);
   EPOSSerial.begin(9600);
+  updateControlWord(CTRL_RESET);
+  updateControlWord(CTRL_ENABLE);
   
   pinMode(re_PIN, OUTPUT);
   pinMode(de_PIN, OUTPUT);
@@ -51,8 +53,6 @@ void setup()
   my_id = EEPROM.read(0); // read the ID stored in eeprom
     
   setMode(RX);
-  
-  updateControlWord(CTRL_RESET);
 }
 
 byte prefex0;
@@ -77,8 +77,8 @@ void loop()
         {
           case 0:
             analogWrite(led0_PIN, payload);
-            updateControlWord(CTRL_ENABLE);
             updateControlWord(CTRL_MOVEREL);  
+            updateControlWord(CTRL_ENABLE);
             break;
           case 1:
             analogWrite(led1_PIN, payload);
