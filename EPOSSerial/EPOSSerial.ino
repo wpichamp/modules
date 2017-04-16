@@ -29,8 +29,8 @@ void setup()
   EPOSSerial.begin(9600);
 
   // enables the coil
-  updateControlWord(CTRL_RESET);
-  updateControlWord(CTRL_ENABLE);
+  updateControlWord(EPOSSerial, CTRL_RESET);
+  updateControlWord(EPOSSerial, CTRL_ENABLE);
 
   delay(1000);
 }
@@ -41,22 +41,21 @@ void loop()
 {
   if (count % 2)
   {
-    updatePositionDemmand(0);
-    updateControlWord(CTRL_ENABLE);
-    updateControlWord(CTRL_MOVEABS);
-    updateControlWord(CTRL_ENABLE);
+    updatePositionDemmand(EPOSSerial, 0);
+    updateControlWord(EPOSSerial, CTRL_ENABLE);
+    updateControlWord(EPOSSerial, CTRL_MOVEABS);
+    updateControlWord(EPOSSerial, CTRL_ENABLE);
   }
   else
   {
-    updatePositionDemmand(50000);
-    // updateControlWord(CTRL_ENABLE);
-    updateControlWord(CTRL_MOVEABS);
-    updateControlWord(CTRL_ENABLE);
+    updatePositionDemmand(EPOSSerial, 50000);
+    updateControlWord(EPOSSerial, CTRL_MOVEABS);
+    updateControlWord(EPOSSerial, CTRL_ENABLE);
   }
   count++;
 }
 
-void updatePositionDemmand(long newValue)
+void updatePositionDemmand(SoftwareSerial &port, long newValue)
 {  
   byte Len = 0x04;
   byte OpCode = 0x68;
@@ -77,17 +76,6 @@ void updatePositionDemmand(long newValue)
   DataArray[4] = word(la.myBytes[3], la.myBytes[2]);
   DataArray[5] = word(0x00, 0x00);    // Zero word
   
-  Serial.println(newValue);
-  for (int index = 0; index < 4; index ++)
-  {
-    Serial.print(index);
-    Serial.print(":");
-    Serial.print("0x");
-    Serial.print(la.myBytes[index], HEX);
-    Serial.print(" ");
-  }
-  Serial.println("");
-
   word CRC = CalcFieldCRC(DataArray, 6);
 
   byte buff[EPOSBUFFSIZE];
@@ -116,16 +104,16 @@ void updatePositionDemmand(long newValue)
   
   for (int index = 0; index < EPOSBUFFSIZE; index++)
   {
-    EPOSSerial.write(buff[index]);
+    port.write(buff[index]);
   }
   
-  while (EPOSSerial.available())
+  while (port.available())
   {
-    EPOSSerial.read(); // you have to clear the input buffer
+    port.read(); // you have to clear the input buffer
   }
 }
 
-void updateControlWord(word newWord)
+void updateControlWord(SoftwareSerial &port, word newWord)
 {  
   byte Len = 0x04;
   byte OpCode = 0x68;
@@ -174,12 +162,12 @@ void updateControlWord(word newWord)
   
   for (int index = 0; index < EPOSBUFFSIZE; index++)
   {
-    EPOSSerial.write(buff[index]);
+    port.write(buff[index]);
   }
   
-  while (EPOSSerial.available())
+  while (port.available())
   {
-    EPOSSerial.read(); // you have to clear the input buffer
+    port.read(); // you have to clear the input buffer
   }
 }
 
