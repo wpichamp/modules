@@ -8,12 +8,19 @@ SoftwareSerial EPOSSerial(8, 9);  // for interfacing with the EPOS4 motor contro
 
 /* start of EPOS command constants */
 #define CTRL_MOVEREL 0x007F   // payload for the relative movement
+#define CTRL_MOVEABS 0x0001F  
 #define CTRL_ENABLE 0x000F    //
 #define CTRL_RESET 0x0006     //
 
 #define DLE 0x90  // part one of the sync part of the communication frame
 #define STX 0x02  // part two of the sync part of the communication frame
 /* end of EPOS command constants */
+
+union longArray
+{
+  byte myBytes[4];
+  long myLong;
+};
 
 /* For setting the mode of the MAX485 */
 #define TX HIGH
@@ -77,7 +84,8 @@ void loop()
         {
           case 0:
             analogWrite(led0_PIN, payload);
-            updateControlWord(CTRL_MOVEREL);  
+            updatePositionDemmand(payload * 150);
+            updateControlWord(CTRL_MOVEABS);  
             updateControlWord(CTRL_ENABLE);
             break;
           case 1:
@@ -96,9 +104,7 @@ void loop()
 void serialEvent() {
   
   if (Serial.available() >= BUSBUFFSIZE)
-  {
-    //digitalWrite(debug_led_PIN, HIGH);
-    
+  {    
     byte bus_buff[BUSBUFFSIZE];
     
     Serial.readBytes(bus_buff, BUSBUFFSIZE);
@@ -110,6 +116,7 @@ void serialEvent() {
     prefex4 = bus_buff[4];
     payload = bus_buff[5];
     depth = bus_buff[6];
+    
     incomingChecksum = bus_buff[7];
     
     byte calculatedChecksum = sum(bus_buff, 7);
@@ -118,12 +125,13 @@ void serialEvent() {
 
     if (goodChecksum)
     {
-      //digitalWrite(debug_led_PIN, goodChecksum);
+      digitalWrite(debug_led_PIN, LOW);
       newMessage = true;
     } 
     else
     {
-      //digitalWrite(debug_led_PIN, LOW);
+      digitalWrite(debug_led_PIN, HIGH);
+      delay(10);
       clearBuffer(); // give up on the current transmission
       newMessage = false;
     }
@@ -131,6 +139,65 @@ void serialEvent() {
   else
   {
     newMessage = false;
+  }
+}
+
+void updatePositionDemmand(long newValue)
+{  
+  byte Len = 0x04;
+  byte OpCode = 0x68;
+
+  byte NodeID = 0x01;
+  word ObjectIndex = 0x607A;
+  byte SubIndex = 0x00;
+
+  longArray la;
+  la.myLong = newValue;
+  
+  word DataArray[6];
+
+  DataArray[0] = word(Len, OpCode);   // len and opcode
+  DataArray[1] = word(lowByte(ObjectIndex), NodeID);
+  DataArray[2] = word(0x00, highByte(ObjectIndex));
+  DataArray[3] = word(la.myBytes[1], la.myBytes[0]); 
+  DataArray[4] = word(la.myBytes[3], la.myBytes[2]);
+  DataArray[5] = word(0x00, 0x00);    // Zero word
+  
+  word CRC = CalcFieldCRC(DataArray, 6);
+
+  byte buff[EPOSBUFFSIZE];
+
+  /* SYNC */ 
+  buff[0] = DLE; // DLE
+  buff[1] = STX; // STX
+
+  /* HEADER */
+  buff[2] = OpCode; // OpCode
+  buff[3] = Len; // Len
+
+  /* DATA */ 
+  buff[4] = NodeID;                 // LowByte data[0], Node ID
+  buff[5] = lowByte(ObjectIndex);   // HighByte data[0], LowByte Index
+  buff[6] = highByte(ObjectIndex);  // LowByte data[1], HighByte Index
+  buff[7] = SubIndex;               // HighByte data[1], SubIndex
+  buff[8] = la.myBytes[0];
+  buff[9] = la.myBytes[1];
+  buff[10] = la.myBytes[2];
+  buff[11] = la.myBytes[3];
+
+  /* CRC */ 
+  buff[12] = lowByte(CRC); // CRC Low Byte
+  buff[13] = highByte(CRC); // CRC High Byte
+  
+  for (int index = 0; index < EPOSBUFFSIZE; index++)
+  {
+    EPOSSerial.write(buff[index]);
+  }
+  EPOSSerial.flush();
+  
+  while (EPOSSerial.available())
+  {
+    EPOSSerial.read(); // you have to clear the input buffer
   }
 }
 
@@ -216,10 +283,9 @@ void updateControlWord(word newWord)
   
   for (int index = 0; index < EPOSBUFFSIZE; index++)
   {
-    digitalWrite(debug_led_PIN, HIGH);
     EPOSSerial.write(epos_buff[index]);
-    digitalWrite(debug_led_PIN, LOW);
   }
+  EPOSSerial.flush();
   
   while (EPOSSerial.available())
   {

@@ -35,26 +35,25 @@ void setup()
   delay(1000);
 }
 
+int count = 0;
 
 void loop()
 {
-  /*
-  for (int index = 0; index < 3; index++)
+  if (count % 2)
   {
+    updatePositionDemmand(0);
     updateControlWord(CTRL_ENABLE);
-    updateControlWord(CTRL_MOVEREL);
-    delay(100);
+    updateControlWord(CTRL_MOVEABS);
+    updateControlWord(CTRL_ENABLE);
   }
-  
-  delay(1000);
-  updateControlWord(CTRL_ENABLE);
-  updateControlWord(CTRL_MOVEABS);
-  delay(1000);
-  */
-  updatePositionDemmand(1000);
-  delay(10);
-  updateControlWord(CTRL_ENABLE);
-  delay(100);
+  else
+  {
+    updatePositionDemmand(50000);
+    // updateControlWord(CTRL_ENABLE);
+    updateControlWord(CTRL_MOVEABS);
+    updateControlWord(CTRL_ENABLE);
+  }
+  count++;
 }
 
 void updatePositionDemmand(long newValue)
