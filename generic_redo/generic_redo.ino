@@ -1,7 +1,7 @@
 #include <EEPROM.h>
 #include <SoftwareSerial.h>
 
-SoftwareSerial EPOSSerial(8, 9);  // for interfacing with the EPOS4 motor controller - RX, TX
+SoftwareSerial WEPOSSerial(8, 9);  // for interfacing with the EPOS4 motor controller - RX, TX
 
 #define BUSBUFFSIZE 8
 #define EPOSBUFFSIZE 14
@@ -42,9 +42,9 @@ int debug_led_PIN = 13;
 void setup() 
 {
   Serial.begin(9600);
-  EPOSSerial.begin(9600);
-  updateControlWord(CTRL_RESET);
-  updateControlWord(CTRL_ENABLE);
+  WEPOSSerial.begin(9600);
+  updateControlWord(WEPOSSerial, CTRL_RESET);
+  updateControlWord(WEPOSSerial, CTRL_ENABLE);
   
   pinMode(re_PIN, OUTPUT);
   pinMode(de_PIN, OUTPUT);
@@ -84,9 +84,9 @@ void loop()
         {
           case 0:
             analogWrite(led0_PIN, payload);
-            updatePositionDemmand(payload * 150);
-            updateControlWord(CTRL_MOVEABS);  
-            updateControlWord(CTRL_ENABLE);
+            updatePositionDemmand(WEPOSSerial, payload * 100);
+            updateControlWord(WEPOSSerial, CTRL_MOVEABS);  
+            updateControlWord(WEPOSSerial, CTRL_ENABLE);
             break;
           case 1:
             analogWrite(led1_PIN, payload);
@@ -142,7 +142,41 @@ void serialEvent() {
   }
 }
 
-void updatePositionDemmand(long newValue)
+byte sum(byte incomingArray[], int arraySize)
+{
+  byte sum = 0;
+  for (int index = 0; index < arraySize; index++)
+  {
+    sum += incomingArray[index];
+  }
+  return sum;
+}
+
+void setMode(boolean state)
+{
+  digitalWrite(re_PIN, state);
+  digitalWrite(de_PIN, state);
+}
+
+void clearBuffer()
+{
+  while (Serial.available() > 0)
+  {
+    Serial.read();
+  }
+}
+
+void writeBytes(byte tx_bytes[], int num_bytes)
+{
+  for (int index = 0; index < num_bytes; index++)
+  {
+    Serial.write(tx_bytes[index]);
+  }
+  Serial.flush();
+}
+
+/* start of EPOS functions */
+void updatePositionDemmand(SoftwareSerial &port, long newValue)
 {  
   byte Len = 0x04;
   byte OpCode = 0x68;
@@ -191,50 +225,16 @@ void updatePositionDemmand(long newValue)
   
   for (int index = 0; index < EPOSBUFFSIZE; index++)
   {
-    EPOSSerial.write(buff[index]);
+    port.write(buff[index]);
   }
-  EPOSSerial.flush();
   
-  while (EPOSSerial.available())
+  while (port.available())
   {
-    EPOSSerial.read(); // you have to clear the input buffer
+    port.read(); // you have to clear the input buffer
   }
 }
 
-byte sum(byte incomingArray[], int arraySize)
-{
-  byte sum = 0;
-  for (int index = 0; index < arraySize; index++)
-  {
-    sum += incomingArray[index];
-  }
-  return sum;
-}
-
-void setMode(boolean state)
-{
-  digitalWrite(re_PIN, state);
-  digitalWrite(de_PIN, state);
-}
-
-void clearBuffer()
-{
-  while (Serial.available() > 0)
-  {
-    Serial.read();
-  }
-}
-
-void writeBytes(byte tx_bytes[], int num_bytes)
-{
-  for (int index = 0; index < num_bytes; index++)
-  {
-    Serial.write(tx_bytes[index]);
-  }
-  Serial.flush();
-}
-
-void updateControlWord(word newWord)
+void updateControlWord(SoftwareSerial &port, word newWord)
 {  
   byte Len = 0x04;
   byte OpCode = 0x68;
@@ -257,42 +257,40 @@ void updateControlWord(word newWord)
 
   word CRC = CalcFieldCRC(DataArray, 6);
 
-  byte epos_buff[EPOSBUFFSIZE];
+  byte buff[EPOSBUFFSIZE];
 
   /* SYNC */ 
-  epos_buff[0] = DLE; // DLE
-  epos_buff[1] = STX; // STX
+  buff[0] = DLE; // DLE
+  buff[1] = STX; // STX
 
   /* HEADER */
-  epos_buff[2] = OpCode; // OpCode
-  epos_buff[3] = Len; // Len
+  buff[2] = OpCode; // OpCode
+  buff[3] = Len; // Len
 
   /* DATA */ 
-  epos_buff[4] = NodeID;                 // LowByte data[0], Node ID
-  epos_buff[5] = lowByte(ObjectIndex);   // HighByte data[0], LowByte Index
-  epos_buff[6] = highByte(ObjectIndex);  // LowByte data[1], HighByte Index
-  epos_buff[7] = SubIndex;               // HighByte data[1], SubIndex
-  epos_buff[8] = lowByte(data);
-  epos_buff[9] = highByte(data);
-  epos_buff[10] = lowByte(fillword);
-  epos_buff[11] = highByte(fillword);
+  buff[4] = NodeID;                 // LowByte data[0], Node ID
+  buff[5] = lowByte(ObjectIndex);   // HighByte data[0], LowByte Index
+  buff[6] = highByte(ObjectIndex);  // LowByte data[1], HighByte Index
+  buff[7] = SubIndex;               // HighByte data[1], SubIndex
+  buff[8] = lowByte(data);
+  buff[9] = highByte(data);
+  buff[10] = lowByte(fillword);
+  buff[11] = highByte(fillword);
 
   /* CRC */ 
-  epos_buff[12] = lowByte(CRC); // CRC Low Byte
-  epos_buff[13] = highByte(CRC); // CRC High Byte
+  buff[12] = lowByte(CRC); // CRC Low Byte
+  buff[13] = highByte(CRC); // CRC High Byte
   
   for (int index = 0; index < EPOSBUFFSIZE; index++)
   {
-    EPOSSerial.write(epos_buff[index]);
+    port.write(buff[index]);
   }
-  EPOSSerial.flush();
   
-  while (EPOSSerial.available())
+  while (port.available())
   {
-    EPOSSerial.read(); // you have to clear the input buffer
+    port.read(); // you have to clear the input buffer
   }
 }
-
 
 word CalcFieldCRC(word* pDataArray, word numberOfWords)
 {
@@ -322,4 +320,5 @@ word CalcFieldCRC(word* pDataArray, word numberOfWords)
   }
   return CRC;
 }
+/* end of EPOS functions */
 

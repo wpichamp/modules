@@ -55,6 +55,7 @@ void loop()
   count++;
 }
 
+/* start of EPOS functions */
 void updatePositionDemmand(SoftwareSerial &port, long newValue)
 {  
   byte Len = 0x04;
@@ -102,15 +103,7 @@ void updatePositionDemmand(SoftwareSerial &port, long newValue)
   buff[12] = lowByte(CRC); // CRC Low Byte
   buff[13] = highByte(CRC); // CRC High Byte
   
-  for (int index = 0; index < EPOSBUFFSIZE; index++)
-  {
-    port.write(buff[index]);
-  }
-  
-  while (port.available())
-  {
-    port.read(); // you have to clear the input buffer
-  }
+  writeBuffToEPOS(port, buff, EPOSBUFFSIZE);
 }
 
 void updateControlWord(SoftwareSerial &port, word newWord)
@@ -159,20 +152,28 @@ void updateControlWord(SoftwareSerial &port, word newWord)
   /* CRC */ 
   buff[12] = lowByte(CRC); // CRC Low Byte
   buff[13] = highByte(CRC); // CRC High Byte
-  
-  for (int index = 0; index < EPOSBUFFSIZE; index++)
+
+  writeBuffToEPOS(port, buff, EPOSBUFFSIZE);
+
+}
+
+void writeBuffToEPOS(SoftwareSerial &port, byte *outputBuff, int outputBuffSize)
+{
+  for (int index = 0; index < outputBuffSize; index++)
   {
-    port.write(buff[index]);
+    port.write(outputBuff[index]);
   }
   
   while (port.available())
   {
-    port.read(); // you have to clear the input buffer
+    byte b = port.read(); // you have to clear the input buffer
+    Serial.print(b, HEX);
   }
+  Serial.println("");
 }
 
-
 word CalcFieldCRC(word* pDataArray, word numberOfWords)
+/* This is from the maxon docs */
 {
   word shifter, c;
   word carry;
@@ -200,4 +201,4 @@ word CalcFieldCRC(word* pDataArray, word numberOfWords)
   }
   return CRC;
 }
-
+/* end of EPOS functions */
