@@ -60,6 +60,8 @@ void setup()
   my_id = EEPROM.read(0); // read the ID stored in eeprom
     
   setMode(RX);
+
+  Serial.println("Thing");
 }
 
 byte prefex0;
