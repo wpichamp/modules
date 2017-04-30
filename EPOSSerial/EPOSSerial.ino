@@ -7,6 +7,7 @@
 #define CTRL_MOVEABS 0x0001F  
 #define CTRL_ENABLE 0x000F    //
 #define CTRL_RESET 0x0006     //
+#define CTRL_ERROR 0x0080
 
 #define DLE 0x90  // part one of the sync part of the communication frame
 #define STX 0x02  // part two of the sync part of the communication frame
@@ -24,40 +25,66 @@ void setup()
 {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
+
+  Serial.println("Starting Init");
   
   // set the data rate for the SoftwareSerial port
   EPOSSerial.begin(9600);
-
-  // enables the coil
+  
   updateControlWord(EPOSSerial, CTRL_RESET);
   updateControlWord(EPOSSerial, CTRL_ENABLE);
 
-  Serial.println("Thing"); 
-  
+  Serial.println("Ending Init");
 }
 
 int count = 0;
 
 void loop()
 {
+
+  // looking for 0x8A81
+  
   if (count % 2)
   {
-    Serial.println("Moving Left");
     updatePositionDemmand(EPOSSerial, 0);
-    updateControlWord(EPOSSerial, CTRL_ENABLE);
     updateControlWord(EPOSSerial, CTRL_MOVEABS);
     updateControlWord(EPOSSerial, CTRL_ENABLE);
-    Serial.println("Reading Status Word");
-    readStatusWord(EPOSSerial);
+    word s = readStatusWord(EPOSSerial);
+    if (s == 8)
+    {
+      Serial.println("Error Detected, reading Error");
+      word e = readErrorRegister(EPOSSerial);
+      
+      if (e == 0x8A81)
+      {
+        Serial.println("Positive Limit Switch Depressed");
+      }
+      
+      Serial.println("Resetting Error!");
+      updateControlWord(EPOSSerial, CTRL_ERROR);
+      updateControlWord(EPOSSerial, CTRL_RESET);
+    }
   }
   else
   {
-    Serial.println("Moving Right");
-    updatePositionDemmand(EPOSSerial, 50000);
+    updatePositionDemmand(EPOSSerial, 500000);
     updateControlWord(EPOSSerial, CTRL_MOVEABS);
     updateControlWord(EPOSSerial, CTRL_ENABLE);
-    Serial.println("Reading Status Word");
-    readStatusWord(EPOSSerial);
+    word s = readStatusWord(EPOSSerial);
+    if (s == 8)
+    {
+      Serial.println("Error Detected, reading Error");
+      word e = readErrorRegister(EPOSSerial);
+      
+      if (e == 0x8A81)
+      {
+        Serial.println("Positive Limit Switch Depressed");
+      }
+      
+      Serial.println("Resetting Error!");
+      updateControlWord(EPOSSerial, CTRL_ERROR);
+      updateControlWord(EPOSSerial, CTRL_RESET);
+    }
   }
   count++;
 }
@@ -116,7 +143,54 @@ void updatePositionDemmand(SoftwareSerial &port, long newValue)
   writeBuffToEPOS(port, buff, EPOSBUFFSIZE, inputBuff, inputBuffSize);
 }
 
-void readStatusWord(SoftwareSerial &port)
+word readErrorRegister(SoftwareSerial &port)
+{
+  word ObjectIndex = 0x603F;
+  byte OpCode = 0x60;
+  byte Len = 0x02;
+  byte SubIndex = 0x00;
+  byte NodeID = 0x01;
+
+  word DataArray[4];
+
+  DataArray[0] = word(Len, OpCode);   // len and opcode
+  DataArray[1] = word(lowByte(ObjectIndex), NodeID);
+  DataArray[2] = word(0x00, highByte(ObjectIndex));
+  DataArray[3] = word(0x00, 0x00);    // Zero word
+
+  word CRC = CalcFieldCRC(DataArray, 4);
+
+  byte buff[EPOSBUFFSIZE];
+
+  /* SYNC */ 
+  buff[0] = DLE; // DLE
+  buff[1] = STX; // STX
+
+  /* HEADER */
+  buff[2] = OpCode; // OpCode
+  buff[3] = Len; // Len
+
+  /* DATA */ 
+  buff[4] = NodeID;                 // LowByte data[0], Node ID
+  buff[5] = lowByte(ObjectIndex);   // HighByte data[0], LowByte Index
+  buff[6] = highByte(ObjectIndex);  // LowByte data[1], HighByte Index
+  buff[7] = SubIndex;               // HighByte data[1], SubIndex
+
+  /* CRC */ 
+  buff[8] = lowByte(CRC); // CRC Low Byte
+  buff[9] = highByte(CRC); // CRC High Byte
+
+  byte inputBuff[64];
+  int inputBuffSize;
+  
+  writeBuffToEPOS(port, buff, 10, inputBuff, inputBuffSize);
+   
+  word w = word(inputBuff[2], inputBuff[1]); // issa hack
+  
+  return w;
+}
+
+word readStatusWord(SoftwareSerial &port)
 {
   word ObjectIndex = 0x6041;
   byte OpCode = 0x60;
@@ -157,16 +231,10 @@ void readStatusWord(SoftwareSerial &port)
   int inputBuffSize;
   
   writeBuffToEPOS(port, buff, 10, inputBuff, inputBuffSize);
-
-  Serial.print("Reading out Buff: ");
-  for (int index = 0; index < inputBuffSize; index++)
-  {
-    Serial.print(inputBuff[index], HEX);
-    Serial.print(" ");
-  }
+ 
+  word w = word(inputBuff[0], inputBuff[1]); // issa hack
   
-  Serial.println("");
-  
+  return w;
 }
 
 void updateControlWord(SoftwareSerial &port, word newWord)
@@ -218,96 +286,95 @@ void updateControlWord(SoftwareSerial &port, word newWord)
 
   byte inputBuff[64];
   int inputBuffSize;
-
+  
   writeBuffToEPOS(port, buff, EPOSBUFFSIZE, inputBuff, inputBuffSize);
 }
 
-void writeBuffToEPOS(SoftwareSerial &port, byte *outputBuff, int outputBuffSize, byte *inputBuff, int &inputBuffSize)
+void writeBuffToEPOS(SoftwareSerial &port, byte *outputBuff, int outputBuffSize, byte *dataBuffer, int &dataBufferSize)
 {
+
+  byte b; // to hold bytes read in from the EPOS
+  byte inputBuffer[64]; // hold the bytes from the EPOS
+  int inputBufferSize = 0; // count the size of the EPOS
+  bool searchingForLength = true; // remain true until the len byte has been read in
+  int bytesInData; // hold the number of bytes in the data part of the message
+  int numberAvailableBytes = 0; // hold the number of bytes in the input buffer of the EPOS port
+  
   for (int index = 0; index < outputBuffSize; index++)
   {
     port.write(outputBuff[index]);
   }
 
-  byte b;
-  
-  inputBuffSize = 0;
- 
-  int dataLength;
-
-  bool searchingForLength = true;
-  
   while (searchingForLength)
   {
     if (port.available())
     {
-      b = port.read(); // you have to clear the input buffer
+      b = port.read(); // start to read in the INPUT buffer
 
-      if ((inputBuffSize == 0) && (b == DLE)) // get the start of frame
+      if ((inputBufferSize == 0) && (b == DLE)) // get the start of frame
       {
-        inputBuff[inputBuffSize] = b;
-        inputBuffSize++;  
+        inputBuffer[inputBufferSize] = b;
+        inputBufferSize++;  
       }
 
-      else if ((inputBuffSize == 1) && (b == STX)) // get the sync
+      else if ((inputBufferSize == 1) && (b == STX)) // get the sync
       {
-        inputBuff[inputBuffSize] = b;
-        inputBuffSize++;
+        inputBuffer[inputBufferSize] = b;
+        inputBufferSize++;
       }
 
-      else if (inputBuffSize == 2) // get OpCode
+      else if (inputBufferSize == 2) // get OpCode
       {
-        inputBuff[inputBuffSize] = b;
-        inputBuffSize++;
+        inputBuffer[inputBufferSize] = b;
+        inputBufferSize++;
       }
 
-      else if (inputBuffSize == 3) // get len, then read in the data bytes and checksum
+      else if (inputBufferSize == 3) // get len, then read in the data bytes and checksum
       {
-        dataLength = ((b + 1) * 2); // b will hold the number of two byte WORDS that will be read in so it must be *2'd
+        bytesInData = ((b) * 2); // b will hold the number of two byte WORDS that will be read in so it must be *2'd
         searchingForLength = false;
 
-        Serial.println(dataLength);
+        inputBuffer[inputBufferSize] = b; // b is len at this point
+        inputBufferSize++;
         
-        inputBuff[inputBuffSize] = b; // b is len at this point
-        inputBuffSize++;
-        
-        int numberAvailableBytes = 0;
-        
-        while (numberAvailableBytes < (dataLength + 2)) // wait until there are the number of bytes for the header + the message + 2 for the crc
+        while (numberAvailableBytes < (bytesInData + 2)) // wait until there are the number of bytes for the header + the message + 2 for the crc
         {
           numberAvailableBytes = port.available();
         }
 
-        byte dataBytes[64];
-        int dataCount = 0;
+        dataBufferSize = 0;
         
-        for (int index = 0; index < dataLength; index++) // read in the header + the data for the actual frame
+        for (int index = 0; index < bytesInData; index++) // read in the header + the data for the actual frame
         {
           b = port.read();
-          inputBuff[inputBuffSize] = b;
+          inputBuffer[inputBufferSize] = b;
           
-          if (inputBuffSize > 4) // don't read DLE, STX, len, OpCode
+          if ((inputBufferSize > 6) && (dataBufferSize < 4)) // don't read DLE, STX, len, OpCode
           {
-            dataBytes[dataCount] = b;
-            dataCount++;
+            dataBuffer[dataBufferSize] = b;
+            dataBufferSize++;
           }
-          inputBuffSize++;
-          
+          inputBufferSize++;
         }
         
         for (int index = 0; index < 2; index++) // read in the two bytes for the checksum
         {
           b = port.read();
-          inputBuff[inputBuffSize] = b;
-          inputBuffSize++;
+          inputBuffer[inputBufferSize] = b;
+          inputBufferSize++;
         }
-
-        *inputBuff = *dataBytes;
-        inputBuffSize = dataCount;
-        
       }
     }
   }
+}
+
+void printBits(byte myByte){
+ for(byte mask = 0x80; mask; mask >>= 1){
+   if(mask  & myByte)
+       Serial.print('1');
+   else
+       Serial.print('0');
+ }
 }
 
 word CalcFieldCRC(word* pDataArray, word numberOfWords)

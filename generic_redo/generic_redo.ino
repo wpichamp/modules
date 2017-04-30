@@ -61,7 +61,7 @@ void setup()
     
   setMode(RX);
 
-  Serial.println("Thing");
+
 }
 
 byte prefex0;
