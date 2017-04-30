@@ -230,8 +230,7 @@ void writeBuffToEPOS(SoftwareSerial &port, byte *outputBuff, int outputBuffSize,
   }
 
   byte b;
-  // byte inputBuff[64];
-
+  
   inputBuffSize = 0;
  
   int dataLength;
@@ -264,32 +263,48 @@ void writeBuffToEPOS(SoftwareSerial &port, byte *outputBuff, int outputBuffSize,
 
       else if (inputBuffSize == 3) // get len, then read in the data bytes and checksum
       {
-        dataLength = (b * 2);
+        dataLength = ((b + 1) * 2); // b will hold the number of two byte WORDS that will be read in so it must be *2'd
         searchingForLength = false;
+
+        Serial.println(dataLength);
         
         inputBuff[inputBuffSize] = b; // b is len at this point
         inputBuffSize++;
         
         int numberAvailableBytes = 0;
         
-        while (numberAvailableBytes < (dataLength + 2)) // wait until there are 
+        while (numberAvailableBytes < (dataLength + 2)) // wait until there are the number of bytes for the header + the message + 2 for the crc
         {
           numberAvailableBytes = port.available();
         }
+
+        byte dataBytes[64];
+        int dataCount = 0;
         
-        for (int index = 0; index < dataLength; index++)
+        for (int index = 0; index < dataLength; index++) // read in the header + the data for the actual frame
+        {
+          b = port.read();
+          inputBuff[inputBuffSize] = b;
+          
+          if (inputBuffSize > 4) // don't read DLE, STX, len, OpCode
+          {
+            dataBytes[dataCount] = b;
+            dataCount++;
+          }
+          inputBuffSize++;
+          
+        }
+        
+        for (int index = 0; index < 2; index++) // read in the two bytes for the checksum
         {
           b = port.read();
           inputBuff[inputBuffSize] = b;
           inputBuffSize++;
         }
+
+        *inputBuff = *dataBytes;
+        inputBuffSize = dataCount;
         
-        for (int index = 0; index < 2; index++)
-        {
-          b = port.read();
-          inputBuff[inputBuffSize] = b;
-          inputBuffSize++;
-        }
       }
     }
   }
