@@ -15,8 +15,14 @@
 
 union longArray
 {
-  byte myBytes[4];
   long myLong;
+  char myBytes[4];
+};
+
+signed union doubleArray
+{
+  signed long myDouble;
+  char myBytes[4];
 };
 
 SoftwareSerial EPOSSerial(8, 9); // RX, TX
@@ -41,9 +47,11 @@ int count = 0;
 
 void loop()
 {
+  Serial.println(readPositionActualValue(EPOSSerial));
+}
 
-  // looking for 0x8A81
-  
+void backandforth()
+{
   if (count % 2)
   {
     updatePositionDemmand(EPOSSerial, 0);
@@ -58,6 +66,7 @@ void loop()
       if (e == 0x8A81)
       {
         Serial.println("Positive Limit Switch Depressed");
+        
       }
       
       Serial.println("Resetting Error!");
@@ -67,7 +76,7 @@ void loop()
   }
   else
   {
-    updatePositionDemmand(EPOSSerial, 500000);
+    updatePositionDemmand(EPOSSerial, 50000);
     updateControlWord(EPOSSerial, CTRL_MOVEABS);
     updateControlWord(EPOSSerial, CTRL_ENABLE);
     word s = readStatusWord(EPOSSerial);
@@ -141,6 +150,58 @@ void updatePositionDemmand(SoftwareSerial &port, long newValue)
   int inputBuffSize;
 
   writeBuffToEPOS(port, buff, EPOSBUFFSIZE, inputBuff, inputBuffSize);
+}
+
+long readPositionActualValue(SoftwareSerial &port)
+{
+  word ObjectIndex = 0x6064;
+  byte OpCode = 0x60;
+  byte Len = 0x02;
+  byte SubIndex = 0x00;
+  byte NodeID = 0x01;
+
+  word DataArray[4];
+
+  DataArray[0] = word(Len, OpCode);   // len and opcode
+  DataArray[1] = word(lowByte(ObjectIndex), NodeID);
+  DataArray[2] = word(0x00, highByte(ObjectIndex));
+  DataArray[3] = word(0x00, 0x00);    // Zero word
+
+  word CRC = CalcFieldCRC(DataArray, 4);
+
+  byte buff[EPOSBUFFSIZE];
+
+  /* SYNC */ 
+  buff[0] = DLE; // DLE
+  buff[1] = STX; // STX
+
+  /* HEADER */
+  buff[2] = OpCode; // OpCode
+  buff[3] = Len; // Len
+
+  /* DATA */ 
+  buff[4] = NodeID;                 // LowByte data[0], Node ID
+  buff[5] = lowByte(ObjectIndex);   // HighByte data[0], LowByte Index
+  buff[6] = highByte(ObjectIndex);  // LowByte data[1], HighByte Index
+  buff[7] = SubIndex;               // HighByte data[1], SubIndex
+
+  /* CRC */ 
+  buff[8] = lowByte(CRC); // CRC Low Byte
+  buff[9] = highByte(CRC); // CRC High Byte
+
+  byte inputBuff[64];
+  int inputBuffSize;
+  
+  writeBuffToEPOS(port, buff, 10, inputBuff, inputBuffSize);
+
+  doubleArray da;
+  
+  da.myBytes[0] = inputBuff[1];
+  da.myBytes[1] = inputBuff[2];
+  da.myBytes[2] = inputBuff[3];
+  da.myBytes[3] = inputBuff[4];
+     
+  return da.myDouble;
 }
 
 word readErrorRegister(SoftwareSerial &port)
