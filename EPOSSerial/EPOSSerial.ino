@@ -25,7 +25,9 @@ signed union doubleArray
   char myBytes[4];
 };
 
-SoftwareSerial EPOSSerial(8, 9); // RX, TX
+SoftwareSerial EPOSSerial2(7, 6); // RX, TX
+SoftwareSerial EPOSSerial3(5, 4); // RX, TX
+
 
 void setup()
 {
@@ -35,10 +37,14 @@ void setup()
   Serial.println("Starting Init");
   
   // set the data rate for the SoftwareSerial port
-  EPOSSerial.begin(9600);
+  EPOSSerial2.begin(9600);
+  EPOSSerial3.begin(9600);
   
-  updateControlWord(EPOSSerial, CTRL_RESET);
-  updateControlWord(EPOSSerial, CTRL_ENABLE);
+  updateControlWord(EPOSSerial2, CTRL_RESET);
+  updateControlWord(EPOSSerial2, CTRL_ENABLE);
+
+  updateControlWord(EPOSSerial3, CTRL_RESET);
+  updateControlWord(EPOSSerial3, CTRL_ENABLE);
 
   Serial.println("Ending Init");
 }
@@ -47,21 +53,16 @@ int count = 0;
 
 void loop()
 {
-  Serial.println(readPositionActualValue(EPOSSerial));
-}
-
-void backandforth()
-{
   if (count % 2)
   {
-    updatePositionDemmand(EPOSSerial, 0);
-    updateControlWord(EPOSSerial, CTRL_MOVEABS);
-    updateControlWord(EPOSSerial, CTRL_ENABLE);
-    word s = readStatusWord(EPOSSerial);
+    updatePositionDemmand(EPOSSerial2, 0);
+    updateControlWord(EPOSSerial2, CTRL_MOVEABS);
+    updateControlWord(EPOSSerial2, CTRL_ENABLE);
+    word s = readStatusWord(EPOSSerial2);
     if (s == 8)
     {
       Serial.println("Error Detected, reading Error");
-      word e = readErrorRegister(EPOSSerial);
+      word e = readErrorRegister(EPOSSerial2);
       
       if (e == 0x8A81)
       {
@@ -70,20 +71,20 @@ void backandforth()
       }
       
       Serial.println("Resetting Error!");
-      updateControlWord(EPOSSerial, CTRL_ERROR);
-      updateControlWord(EPOSSerial, CTRL_RESET);
+      updateControlWord(EPOSSerial2, CTRL_ERROR);
+      updateControlWord(EPOSSerial2, CTRL_RESET);
     }
   }
   else
   {
-    updatePositionDemmand(EPOSSerial, 50000);
-    updateControlWord(EPOSSerial, CTRL_MOVEABS);
-    updateControlWord(EPOSSerial, CTRL_ENABLE);
-    word s = readStatusWord(EPOSSerial);
+    updatePositionDemmand(EPOSSerial2, 50000);
+    updateControlWord(EPOSSerial2, CTRL_MOVEABS);
+    updateControlWord(EPOSSerial2, CTRL_ENABLE);
+    word s = readStatusWord(EPOSSerial2);
     if (s == 8)
     {
       Serial.println("Error Detected, reading Error");
-      word e = readErrorRegister(EPOSSerial);
+      word e = readErrorRegister(EPOSSerial2);
       
       if (e == 0x8A81)
       {
@@ -91,8 +92,8 @@ void backandforth()
       }
       
       Serial.println("Resetting Error!");
-      updateControlWord(EPOSSerial, CTRL_ERROR);
-      updateControlWord(EPOSSerial, CTRL_RESET);
+      updateControlWord(EPOSSerial2, CTRL_ERROR);
+      updateControlWord(EPOSSerial2, CTRL_RESET);
     }
   }
   count++;
